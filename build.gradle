@@ -1,0 +1,53 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'gradle.plugin.nl.javadude.gradle.plugins:license-gradle-plugin:0.13.1'
+    }
+}
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'com.gradle.plugin-publish' version '0.9.7'
+    id 'nebula.plugin-plugin' version '5.17.1'
+    id 'nebula.kotlin' version '1.1.3-2'
+    id 'nebula.integtest' version '3.4.0'
+}
+
+apply plugin: 'com.github.hierynomus.license'
+
+repositories {
+    jcenter()
+}
+
+group = 'io.spring.gradle'
+description = 'Publish artifacts to bintray'
+
+contacts {
+    'jkschneider@gmail.com' {
+        moniker 'Jon Schneider'
+        github 'jkschneider'
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-reflect"
+
+    // shade these
+    compile 'com.squareup.okhttp3:okhttp:3.8.1'
+    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.+'
+
+    testCompile 'com.netflix.nebula:nebula-test:latest.release'
+}
+
+license {
+    header = file('gradle/licenseHeader.txt')
+    exclude '**/*.tokens'
+    mapping {
+        kt = 'JAVADOC_STYLE'
+    }
+    sourceSets = project.sourceSets
+    strictCheck = true
+}
