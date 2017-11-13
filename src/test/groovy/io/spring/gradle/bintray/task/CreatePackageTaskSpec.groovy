@@ -1,6 +1,6 @@
-package io.spring.bintray.task
+package io.spring.gradle.bintray.task
 
-import io.spring.bintray.BintrayPackage
+import io.spring.gradle.bintray.BintrayPackage
 import nebula.test.ProjectSpec
 
 class CreatePackageTaskSpec extends ProjectSpec {
@@ -9,6 +9,7 @@ class CreatePackageTaskSpec extends ProjectSpec {
         BintrayPackage pkg = new BintrayPackage('spring', 'jars', 'io.spring.cloud')
         CreatePackageTask task = project.tasks.create('bintrayCreatePackage', CreatePackageTask)
         task.pkg = pkg
+        task.postConfigure()
 
         then:
         task.outputs.upToDateSpec.isSatisfiedBy(task)

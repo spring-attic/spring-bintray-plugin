@@ -1,6 +1,6 @@
-package io.spring.bintray
+package io.spring.gradle.bintray
 
-import io.spring.bintray.task.AbstractBintrayTask
+import io.spring.gradle.bintray.task.AbstractBintrayTask
 import nebula.test.ProjectSpec
 
 class BintrayProjectSpec extends ProjectSpec {

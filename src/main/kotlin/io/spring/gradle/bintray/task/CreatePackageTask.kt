@@ -1,9 +1,9 @@
-package io.spring.bintray.task
+package io.spring.gradle.bintray.task
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
-import io.spring.bintray.BintrayPackage
+import io.spring.gradle.bintray.BintrayPackage
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -30,23 +30,20 @@ open class CreatePackageTask : AbstractBintrayTask() {
     @Input @Optional var labels: Collection<String> = emptyList()
     @Input @Optional var websiteUrl: String? = null
     @Input @Optional var issueTrackerUrl: String? = null
-    @Input @Optional var publicDownloadNumbers: Boolean = true
-    @Input @Optional var githubRepo: String? = null
-    @Input @Optional var githubReleaseNotesFile: String? = null
 
     private val packagePath by lazy { pkg.run { "packages/$org/$repo/$name" } }
 
     init {
-        outputs.upToDateWhen {
-            val response = http.newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/$packagePath" }).build()).execute()
-            response.isSuccessful // if successful, this package already exists
+        onlyIf {
+            val response = bintrayClient.http().newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/$packagePath" }).build()).execute()
+            !response.isSuccessful // if successful, this package already exists
         }
     }
 
     @TaskAction
     fun createPackage() {
         val (org, repo, packageName) = pkg
-        val createPackage = CreatePackage(packageName, desc, licenses, labels, websiteUrl, issueTrackerUrl, vcsUrl, publicDownloadNumbers, githubRepo, githubReleaseNotesFile)
+        val createPackage = CreatePackage(packageName, desc, licenses, labels, websiteUrl, issueTrackerUrl, vcsUrl, true)
 
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),
                 mapper.writeValueAsString(createPackage))
@@ -56,9 +53,11 @@ open class CreatePackageTask : AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = http.newCall(request).execute()
+        val response = bintrayClient.http().newCall(request).execute()
         if(response.isSuccessful) {
             logger.info("Created Bintray package /$packagePath")
+        } else if(response.code() == 409) {
+            logger.info("Bintray package already exists /$packagePath")
         } else {
             throw GradleException("Could not create package /$packagePath: HTTP ${response.code()} / ${response.body()?.string()}")
         }
@@ -73,7 +72,5 @@ open class CreatePackageTask : AbstractBintrayTask() {
                                      val websiteUrl: String?,
                                      val issueTrackerUrl: String?,
                                      val vcsUrl: String,
-                                     val publicDownloadNumbers: Boolean,
-                                     val githubRepo: String?,
-                                     val githubReleaseNotesFile: String?)
+                                     val publicDownloadNumbers: Boolean)
 }

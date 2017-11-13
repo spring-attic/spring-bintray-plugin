@@ -1,8 +1,8 @@
-package io.spring.bintray
+package io.spring.gradle.bintray
 
-import io.spring.bintray.task.CreatePackageTask
+import io.spring.gradle.bintray.task.CreatePackageTask
 
-class CreatePackageIntegSpec extends BintrayProjectSpec {
+class CreatePackageTaskIntegSpec extends BintrayProjectSpec {
     // CLEANUP: http -a bintrayUser:bintrayKey DELETE https://api.bintray.com/packages/spring/jars/spring-bintray-plugin-test
     def 'create a new package'() {
         when:
@@ -12,6 +12,7 @@ class CreatePackageIntegSpec extends BintrayProjectSpec {
         task.vcsUrl = 'http://github.com/spring-gradle-plugins/spring-bintray-plugin'
         task.licenses = ['Apache-2.0']
         loadKeys(task)
+        task.postConfigure()
 
         then: 'the package must not exist yet -- delete it if it does'
         !task.outputs.upToDateSpec.isSatisfiedBy(task)

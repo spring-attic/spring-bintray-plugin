@@ -1,6 +1,6 @@
-package io.spring.bintray.task
+package io.spring.gradle.bintray.task
 
-import io.spring.bintray.BintrayPackage
+import io.spring.gradle.bintray.BintrayPackage
 import nebula.test.ProjectSpec
 import org.gradle.api.publish.maven.MavenPublication
 
@@ -11,6 +11,7 @@ class CreateVersionTaskSpec extends ProjectSpec {
         CreateVersionTask task = project.tasks.create('bintrayCreateVersion', CreateVersionTask)
         task.pkg = pkg
         task.publication = [getVersion: {'1.2.0.RELEASE'}] as MavenPublication
+        task.postConfigure()
 
         then:
         task.outputs.upToDateSpec.isSatisfiedBy(task)

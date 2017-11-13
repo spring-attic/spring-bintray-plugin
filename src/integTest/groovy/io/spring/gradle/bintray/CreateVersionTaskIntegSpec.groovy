@@ -1,10 +1,12 @@
-package io.spring.bintray
+package io.spring.gradle.bintray
 
-import io.spring.bintray.task.CreatePackageTask
-import io.spring.bintray.task.CreateVersionTask
+import io.spring.gradle.bintray.task.CreatePackageTask
+import io.spring.gradle.bintray.task.CreateVersionTask
+import io.spring.gradle.bintray.task.CreatePackageTask
+import io.spring.gradle.bintray.task.CreateVersionTask
 import org.gradle.api.publish.maven.MavenPublication
 
-class CreateVersionIntegSpec extends BintrayProjectSpec implements Serializable {
+class CreateVersionTaskIntegSpec extends BintrayProjectSpec implements Serializable {
     // CLEANUP: http -a bintrayUser:bintrayKey DELETE https://api.bintray.com/packages/spring/jars/spring-bintray-plugin-test
     def 'create a new version'() {
         setup:
@@ -14,6 +16,7 @@ class CreateVersionIntegSpec extends BintrayProjectSpec implements Serializable 
         createPackage.vcsUrl = 'http://github.com/spring-gradle-plugins/spring-bintray-plugin'
         createPackage.licenses = ['Apache-2.0']
         loadKeys(createPackage)
+        createPackage.postConfigure()
 
         if(!createPackage.outputs.upToDateSpec.isSatisfiedBy(createPackage))
             createPackage.execute()
@@ -23,6 +26,7 @@ class CreateVersionIntegSpec extends BintrayProjectSpec implements Serializable 
         createVersion.pkg = pkg
         createVersion.publication = [getVersion: {'0.1.0'}] as MavenPublication
         loadKeys(createVersion)
+        createVersion.postConfigure()
 
         then: 'the version must not exist yet -- delete it if it does'
         !createVersion.outputs.upToDateSpec.isSatisfiedBy(createVersion)

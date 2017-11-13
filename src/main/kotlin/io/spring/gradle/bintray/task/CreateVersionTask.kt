@@ -1,9 +1,9 @@
-package io.spring.bintray.task
+package io.spring.gradle.bintray.task
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
-import io.spring.bintray.BintrayPackage
+import io.spring.gradle.bintray.BintrayPackage
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -14,21 +14,21 @@ import org.gradle.api.tasks.TaskAction
 
 open class CreateVersionTask: AbstractBintrayTask() {
     @Input lateinit var pkg: BintrayPackage
-    @Input lateinit var publication: MavenPublication
+    @Input lateinit var version: String
 
-    private val versionPath by lazy { pkg.run { "$BINTRAY_API_URL/packages/$org/$repo/$name/versions/${publication.version}" } }
+    private val versionPath by lazy { pkg.run { "${BINTRAY_API_URL}/packages/$org/$repo/$name/versions/$version" } }
 
     init {
-        outputs.upToDateWhen {
-            val response = http.newCall(Request.Builder().head().url(versionPath).build()).execute()
-            response.isSuccessful // if successful, this version already exists
+        onlyIf {
+            val response = bintrayClient.http().newCall(Request.Builder().head().url(versionPath).build()).execute()
+            !response.isSuccessful // if successful, this version already exists
         }
     }
 
     @TaskAction
     fun createVersion() {
         val (org, repo, packageName) = pkg
-        val createVersion = CreateVersion(publication.version, "v${publication.version}")
+        val createVersion = CreateVersion(version, "v$version")
 
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),
                 mapper.writeValueAsString(createVersion))
@@ -38,11 +38,13 @@ open class CreateVersionTask: AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = http.newCall(request).execute()
+        val response = bintrayClient.http().newCall(request).execute()
         if(response.isSuccessful) {
-            logger.info("Created Bintray package /$versionPath")
+            logger.info("Created Bintray version /$versionPath")
+        } else if(response.code() == 409) {
+            logger.info("Bintray version already exists /$versionPath")
         } else {
-            throw GradleException("Could not create package /$versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+            throw GradleException("Could not create version /$versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
         }
     }
 

@@ -1,4 +1,4 @@
-package io.spring.bintray.task
+package io.spring.gradle.bintray.task
 
 /**
  * Perform GPG signing

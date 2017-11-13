@@ -1,4 +1,4 @@
-package io.spring.bintray
+package io.spring.gradle.bintray
 
 import java.io.Serializable
 
