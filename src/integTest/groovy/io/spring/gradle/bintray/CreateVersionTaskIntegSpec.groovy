@@ -2,8 +2,6 @@ package io.spring.gradle.bintray
 
 import io.spring.gradle.bintray.task.CreatePackageTask
 import io.spring.gradle.bintray.task.CreateVersionTask
-import io.spring.gradle.bintray.task.CreatePackageTask
-import io.spring.gradle.bintray.task.CreateVersionTask
 import org.gradle.api.publish.maven.MavenPublication
 
 class CreateVersionTaskIntegSpec extends BintrayProjectSpec implements Serializable {

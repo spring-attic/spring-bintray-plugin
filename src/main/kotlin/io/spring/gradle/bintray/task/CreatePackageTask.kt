@@ -13,7 +13,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 /**
- * Creates a bintray package
+ * Creates a bintray package. Up-to-date when the package already exists.
  *
  * @author Jon Schneider
  */
@@ -31,13 +31,14 @@ open class CreatePackageTask : AbstractBintrayTask() {
     @Input @Optional var websiteUrl: String? = null
     @Input @Optional var issueTrackerUrl: String? = null
 
-    private val packagePath by lazy { pkg.run { "packages/$org/$repo/$name" } }
+    private val packagePath by lazy { pkg.run { "packages/$subject/$repo/$name" } }
 
-    init {
+    override fun postConfigure() {
         onlyIf {
             val response = bintrayClient.http().newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/$packagePath" }).build()).execute()
             !response.isSuccessful // if successful, this package already exists
         }
+        super.postConfigure()
     }
 
     @TaskAction

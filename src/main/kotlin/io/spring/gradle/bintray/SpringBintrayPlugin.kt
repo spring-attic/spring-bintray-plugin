@@ -1,9 +1,6 @@
 package io.spring.gradle.bintray
 
-import io.spring.gradle.bintray.task.AbstractBintrayTask
-import io.spring.gradle.bintray.task.CreatePackageTask
-import io.spring.gradle.bintray.task.CreateVersionTask
-import io.spring.gradle.bintray.task.UploadTask
+import io.spring.gradle.bintray.task.*
 import org.ajoberstar.grgit.Remote
 import org.ajoberstar.grgit.operation.OpenOp
 import org.ajoberstar.grgit.operation.RemoteListOp
@@ -14,6 +11,9 @@ import org.gradle.api.internal.tasks.DefaultTaskDependency
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 
+/**
+ * @author Jon Schneider
+ */
 class SpringBintrayPlugin: Plugin<Project> {
     lateinit var ext: SpringBintrayExtension
 
@@ -28,9 +28,18 @@ class SpringBintrayPlugin: Plugin<Project> {
         val uploadTask = project.tasks.create("bintrayUpload", UploadTask::class.java)
         uploadTask.dependsOn(createVersionTask)
 
+        val signTask = project.tasks.create("bintraySign", SignTask::class.java)
+        signTask.dependsOn(uploadTask)
+
+        val publishTask = project.tasks.create("bintrayPublish", PublishTask::class.java)
+        publishTask.dependsOn(signTask)
+
+        val mavenCentralSyncTask = project.tasks.create("mavenCentralSync", MavenCentralSyncTask::class.java)
+        mavenCentralSyncTask.dependsOn(publishTask)
+
         project.afterEvaluate {
             if (ext.org == null || ext.repo == null || ext.publication == null || ext.licenses == null) {
-                listOf(createPackageTask, createVersionTask, uploadTask).forEach {
+                listOf(createPackageTask, createVersionTask, uploadTask, signTask, publishTask, mavenCentralSyncTask).forEach {
                     it.onlyIf {
                         project.logger.info("bintray.[org, repo, packageName, licenses] are all required")
                         false
@@ -41,7 +50,55 @@ class SpringBintrayPlugin: Plugin<Project> {
                 configureCreatePackageTask(project)
                 configureCreateVersionTask(project)
                 configureUploadTask(project)
+                configureSignTask(project)
+                configurePublishTask(project)
+                configureMavenCentralSync(project)
             }
+        }
+    }
+
+    private fun configureMavenCentralSync(project: Project) {
+        project.tasks.withType(MavenCentralSyncTask::class.java) { t ->
+            t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
+
+            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+            if(publication is MavenPublication) {
+                t.version = publication.version
+            }
+
+            t.configureBintrayAuth()
+
+            t.postConfigure()
+        }
+    }
+
+    private fun configureSignTask(project: Project) {
+        project.tasks.withType(SignTask::class.java) { t ->
+            t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
+
+            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+            if(publication is MavenPublication) {
+                t.version = publication.version
+            }
+
+            t.gpgPassphrase = ext.gpgPassphrase
+            t.configureBintrayAuth()
+
+            t.postConfigure()
+        }
+    }
+
+    private fun configurePublishTask(project: Project) {
+        project.tasks.withType(PublishTask::class.java) { t ->
+            t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
+
+            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+            if(publication is MavenPublication) {
+                t.version = publication.version
+            }
+            t.configureBintrayAuth()
+
+            t.postConfigure()
         }
     }
 
@@ -49,6 +106,7 @@ class SpringBintrayPlugin: Plugin<Project> {
         project.tasks.withType(UploadTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
             t.publicationName = ext.publication!!
+            t.overrideOnUpload = ext.overrideOnUpload
             t.configureBintrayAuth()
 
             t.postConfigure()

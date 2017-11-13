@@ -3,6 +3,7 @@ package io.spring.gradle.bintray
 import nebula.test.IntegrationTestKitSpec
 
 class UploadTaskIntegSpec extends IntegrationTestKitSpec {
+    // CLEANUP: http -a bintrayUser:bintrayKey DELETE https://api.bintray.com/packages/spring/jars/spring-bintray-plugin-test
     def setup() {
         debug = true
 
@@ -48,11 +49,12 @@ class UploadTaskIntegSpec extends IntegrationTestKitSpec {
                 id 'nebula.maven-apache-license' version '5.1.1' apply false
                 id 'nebula.info' version '3.6.0' apply false
                 id 'nebula.contacts' version '3.0.1' apply false
+                id 'com.dorongold.task-tree' version "1.3"
             }
             
             allprojects {
-                group = 'io.spring.gradle'
-                version = '0.1.0'
+                group = 'io.spring.gradle\'
+                version = '0.1.0\'
             }
             
             subprojects {
@@ -90,6 +92,6 @@ class UploadTaskIntegSpec extends IntegrationTestKitSpec {
 
     def uploadFiles() {
         expect:
-        runTasks('build', 'bintrayUpload')
+        runTasks('bintraySign', "-s")
     }
 }

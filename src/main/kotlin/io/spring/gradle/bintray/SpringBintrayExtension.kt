@@ -18,5 +18,13 @@ open class SpringBintrayExtension {
     var bintrayUser: String? = null
     var bintrayKey: String? = null
 
+    // required for syncing to Maven Central
+    var ossrhUser: String? = null
+    var ossrhPassword: String? = null
+
     var publication: String? = null
+
+    var gpgPassphrase: String? = null
+
+    var overrideOnUpload: Boolean = false
 }

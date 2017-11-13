@@ -8,43 +8,48 @@ import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
 import org.gradle.api.GradleException
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * Create a package version. Up-to-date when the version already exists.
+ *
+ * @author Jon Schneider
+ */
 open class CreateVersionTask: AbstractBintrayTask() {
     @Input lateinit var pkg: BintrayPackage
     @Input lateinit var version: String
 
-    private val versionPath by lazy { pkg.run { "${BINTRAY_API_URL}/packages/$org/$repo/$name/versions/$version" } }
+    private val versionPath by lazy { pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" } }
 
-    init {
+    override fun postConfigure() {
         onlyIf {
             val response = bintrayClient.http().newCall(Request.Builder().head().url(versionPath).build()).execute()
             !response.isSuccessful // if successful, this version already exists
         }
+        super.postConfigure()
     }
 
     @TaskAction
     fun createVersion() {
-        val (org, repo, packageName) = pkg
+        val (subject, repo, name) = pkg
         val createVersion = CreateVersion(version, "v$version")
 
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),
                 mapper.writeValueAsString(createVersion))
 
         val request = Request.Builder()
-                .url("$BINTRAY_API_URL/packages/$org/$repo/$packageName/versions")
+                .url("$BINTRAY_API_URL/packages/$subject/$repo/$name/versions")
                 .post(body)
                 .build()
 
         val response = bintrayClient.http().newCall(request).execute()
         if(response.isSuccessful) {
-            logger.info("Created Bintray version /$versionPath")
+            logger.info("Created Bintray version $versionPath")
         } else if(response.code() == 409) {
-            logger.info("Bintray version already exists /$versionPath")
+            logger.info("Bintray version already exists $versionPath")
         } else {
-            throw GradleException("Could not create version /$versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+            throw GradleException("Could not create version $versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
         }
     }
 
