@@ -28,11 +28,13 @@ class SpringBintrayPlugin: Plugin<Project> {
         val uploadTask = project.tasks.create("bintrayUpload", UploadTask::class.java)
         uploadTask.dependsOn(createVersionTask)
 
+        // We try to sign on upload, so this task won't be part of the default chain of events.
+        // It's here in case you need to sign manually after uploading for whatever reason.
         val signTask = project.tasks.create("bintraySign", SignTask::class.java)
         signTask.dependsOn(uploadTask)
 
         val publishTask = project.tasks.create("bintrayPublish", PublishTask::class.java)
-        publishTask.dependsOn(signTask)
+        publishTask.dependsOn(uploadTask)
 
         val mavenCentralSyncTask = project.tasks.create("mavenCentralSync", MavenCentralSyncTask::class.java)
         mavenCentralSyncTask.dependsOn(publishTask)
@@ -107,6 +109,7 @@ class SpringBintrayPlugin: Plugin<Project> {
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
             t.publicationName = ext.publication!!
             t.overrideOnUpload = ext.overrideOnUpload
+            t.gpgPassphrase = ext.gpgPassphrase
             t.configureBintrayAuth()
 
             t.postConfigure()

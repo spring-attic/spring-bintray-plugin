@@ -1,5 +1,6 @@
 package io.spring.gradle.bintray.task
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.spring.gradle.bintray.BintrayClient
@@ -11,6 +12,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.workers.IsolationMode
 import org.gradle.workers.WorkerConfiguration
@@ -28,6 +30,7 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
     @Input lateinit var pkg: BintrayPackage
     @Input lateinit var publicationName: String
     @Input var overrideOnUpload: Boolean = false
+    @Input @Optional var gpgPassphrase: String? = null
 
     private lateinit var publication: MavenPublication
 
@@ -55,7 +58,7 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
                                 ".${artifact.extension}"
 
                 config.isolationMode = IsolationMode.NONE
-                config.params(bintrayClient, pkg, publication.version, path, artifact.file, overrideOnUpload)
+                config.params(bintrayClient, pkg, publication.version, path, artifact.file, overrideOnUpload, gpgPassphrase ?: "")
             }
         }
     }
@@ -69,7 +72,8 @@ private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
                                                val version: String,
                                                val path: String,
                                                val artifact: File,
-                                               val overrideOnUpload: Boolean) : Runnable {
+                                               val overrideOnUpload: Boolean,
+                                               val gpgPassphrase: String?) : Runnable {
 
     @Transient private val mapper = ObjectMapper().registerModule(KotlinModule())
     @Transient private val logger = LoggerFactory.getLogger(UploadWorker::class.java)
@@ -80,8 +84,14 @@ private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
         if(overrideOnUpload || !artifactExists()) {
             logger.info("Uploading $path")
 
-            val request = Request.Builder()
+            var requestBuilder = Request.Builder()
                     .header("Content-Type", "*/*")
+
+            if(!gpgPassphrase.isNullOrBlank()) {
+                requestBuilder = requestBuilder.header("X-GPG-PASSPHRASE", gpgPassphrase)
+            }
+
+            val request = requestBuilder
                     .put(RequestBody.create(MediaType.parse("application/octet-stream"), artifact))
                     .url("${AbstractBintrayTask.BINTRAY_API_URL}/content/$org/$repo/$packageName/$version/$path")
                     .build()
@@ -116,4 +126,5 @@ private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
     }
 }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 private data class UploadResponse(val warn: String? = null)

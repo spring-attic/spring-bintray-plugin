@@ -72,6 +72,7 @@ class UploadTaskIntegSpec extends IntegrationTestKitSpec {
                     repo = 'jars'
                     publication = 'nebula'
                     licenses = ['Apache-2.0']
+                    overrideOnUpload = true
                 }
             
                 contacts {
@@ -92,6 +93,6 @@ class UploadTaskIntegSpec extends IntegrationTestKitSpec {
 
     def uploadFiles() {
         expect:
-        runTasks('bintraySign', "-s")
+        runTasks('bintrayUpload', "-s")
     }
 }
