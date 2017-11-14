@@ -52,3 +52,32 @@ license {
     sourceSets = project.sourceSets
     strictCheck = true
 }
+
+pluginBundle {
+    website = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin'
+    vcsUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin.git'
+    description = project.description
+
+    plugins {
+        springBintrayPlugin {
+            id = 'io.spring.bintray'
+            displayName = 'Spring bintray plugin'
+            description = project.description
+            tags = ['spring', 'bintray']
+        }
+    }
+
+    mavenCoordinates {
+        groupId = 'io.spring.gradle'
+        artifactId = 'spring-bintray-plugin'
+    }
+}
+
+bintray.pkg {
+    repo = 'jars'
+    userOrg = 'spring'
+    websiteUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin'
+    vcsUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin.git'
+    issueTrackerUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin/issues'
+    labels = ['gradle', 'spring', 'bintray']
+}

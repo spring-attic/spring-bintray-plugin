@@ -24,6 +24,8 @@ bintray {
     licenses = ['Apache-2.0']
     ossrhUser = // only if syncing to Maven Central
     ossrhPassword = //...
+    gpgPassphrase = // if your repository requires signing with a other-than-Bintray key
+    overrideOnUpload = false // should the upload task override existing artifacts?
     
     // The following OPTIONAL properties are derived from the `origin` github remote if not explicitly provided:
     websiteUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin'
@@ -49,7 +51,3 @@ project.rootProject.subprojects.each { p ->
 * Splits Bintray interactions into separate tasks so you can more easily control which projects do what and target particular tasks in the event of Bintray partial failure.
 * Logs warnings contained in the response body of uploads (`gradle-bintray-plugin` suppresses these warnings).
 * Uses the Gradle Worker API to parallelize uploads.
-
-## Limitations
-
-* Assumes that you are using Bintray's automatic content signing. See the Bintray docs on the [minimum requirements](https://bintray.com/docs/api/#gpg_signing) to support this.
