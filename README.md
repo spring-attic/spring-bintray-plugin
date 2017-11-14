@@ -1,5 +1,9 @@
 # Spring Bintray Plugin
 
+## Installing
+
+Follow the instructions on the Gradle [Plugin Portal](https://plugins.gradle.org/plugin/io.spring.bintray).
+
 ## Purpose
 
 This plugin is a modernization of [gradle-bintray-plugin](https://github.com/bintray/gradle-bintray-plugin) which provides more control over the individual stages of execution from creating a package all the way through Maven Central sync. Bintray's plugin places all of this logic in a single task `bintrayUpload` which is executed once on the root project for all subprojects. In the event of partial success, this can leave you high and dry manually exercising REST calls against the Bintray API to finish a release. 
