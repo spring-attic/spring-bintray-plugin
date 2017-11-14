@@ -8,7 +8,7 @@ Furthermore, the single-task per project model makes it difficult to configure p
 
 ## A task for every stage
 
-These tasks are executed on a per-project basis rather than at the root project.
+These tasks are executed on a per-project basis rather than at the root project. Each task in this list `dependsOn` the prior task, so it is sufficient to call `mavenCentralSync` to perform the entire sequence. Or if you just want to get through the upload phase and publish it from the Bintray UI, call `bintrayUpload`.
 
 1. `bintrayCreatePackage` - Creates a new package only if it doesn't already exist
 2. `bintrayCreateVersion` - Creates a new package version only if it doesn't already exist
