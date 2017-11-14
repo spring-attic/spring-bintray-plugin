@@ -63,6 +63,17 @@ class SpringBintrayPlugin: Plugin<Project> {
         project.tasks.withType(MavenCentralSyncTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
 
+            t.onlyIf {
+                if(ext.ossrhUser == null || ext.ossrhPassword == null) {
+                    project.logger.info("bintray.[ossrhUser, ossrhPassword] are required to sync to Maven Central")
+                    false
+                }
+                else true
+            }
+
+            ext.ossrhUser?.let { t.ossrhUser = it }
+            ext.ossrhPassword?.let { t.ossrhPassword = it }
+
             val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
             if(publication is MavenPublication) {
                 t.version = publication.version
