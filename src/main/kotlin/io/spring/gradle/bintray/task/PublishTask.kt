@@ -1,5 +1,6 @@
 package io.spring.gradle.bintray.task
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
@@ -33,11 +34,12 @@ open class PublishTask : AbstractBintrayTask() {
         onlyIf {
             // version must exist in Bintray prior to publishing
             val response = bintrayClient.http()
-                    .newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
+                    .newCall(Request.Builder().get().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
                     .execute()
 
             // if the version is already published, do nothing
-            response.isSuccessful && (mapper.readValue(response.body()?.string(), GetVersion::class.java)?.published?.let { false } ?: false)
+            val body = response.body()?.string()
+            response.isSuccessful && (mapper.readValue(body, GetVersion::class.java)?.published?.let { !it } ?: false)
         }
         super.postConfigure()
     }
@@ -69,5 +71,6 @@ open class PublishTask : AbstractBintrayTask() {
             // causes this request to block waiting for publishing to complete, blocking for the maximum timeout allowed by Bintray
             val publishWaitForSecs: Int = -1)
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private data class GetVersion(val published: Boolean)
 }

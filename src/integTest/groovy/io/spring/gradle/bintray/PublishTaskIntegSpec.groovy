@@ -2,12 +2,12 @@ package io.spring.gradle.bintray
 
 import nebula.test.IntegrationTestKitSpec
 
-class UploadTaskIntegSpec extends IntegrationTestKitSpec {
+class PublishTaskIntegSpec extends IntegrationTestKitSpec {
     // CLEANUP: http -a bintrayUser:bintrayKey DELETE https://api.bintray.com/packages/spring/jars/spring-bintray-plugin-test
     def setup() {
         debug = true
 
-        new File(projectDir, 'gradle.properties') << UploadTaskIntegSpec.getResourceAsStream('/bintray.properties')
+        new File(projectDir, 'gradle.properties') << PublishTaskIntegSpec.getResourceAsStream('/bintray.properties')
 
         settingsFile << '''
             rootProject.name = 'spring-bintray-plugin-test'
@@ -93,6 +93,6 @@ class UploadTaskIntegSpec extends IntegrationTestKitSpec {
 
     def uploadFiles() {
         expect:
-        runTasks('bintrayUpload', "-s")
+        runTasks('bintrayPublish', "-s")
     }
 }
