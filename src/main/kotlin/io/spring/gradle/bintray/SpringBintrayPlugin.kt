@@ -62,6 +62,7 @@ class SpringBintrayPlugin: Plugin<Project> {
     private fun configureMavenCentralSync(project: Project) {
         project.tasks.withType(MavenCentralSyncTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
+            t.version = version(project)
 
             t.onlyIf {
                 if(ext.ossrhUser == null || ext.ossrhPassword == null) {
@@ -74,11 +75,6 @@ class SpringBintrayPlugin: Plugin<Project> {
             ext.ossrhUser?.let { t.ossrhUser = it }
             ext.ossrhPassword?.let { t.ossrhPassword = it }
 
-            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
-            if(publication is MavenPublication) {
-                t.version = publication.version
-            }
-
             t.configureBintrayAuth()
 
             t.postConfigure()
@@ -88,11 +84,7 @@ class SpringBintrayPlugin: Plugin<Project> {
     private fun configureSignTask(project: Project) {
         project.tasks.withType(SignTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
-
-            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
-            if(publication is MavenPublication) {
-                t.version = publication.version
-            }
+            t.version = version(project)
 
             t.gpgPassphrase = ext.gpgPassphrase
             t.configureBintrayAuth()
@@ -104,11 +96,7 @@ class SpringBintrayPlugin: Plugin<Project> {
     private fun configurePublishTask(project: Project) {
         project.tasks.withType(PublishTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
-
-            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
-            if(publication is MavenPublication) {
-                t.version = publication.version
-            }
+            t.version = version(project)
             t.configureBintrayAuth()
 
             t.postConfigure()
@@ -130,11 +118,10 @@ class SpringBintrayPlugin: Plugin<Project> {
     private fun configureCreateVersionTask(project: Project) {
         project.tasks.withType(CreateVersionTask::class.java) { t ->
             t.pkg = BintrayPackage(ext.org!!, ext.repo!!, ext.packageName ?: project.name)
+            t.version = version(project)
 
             val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
             if(publication is MavenPublication) {
-                t.version = publication.version
-
                 publication.artifacts.forEach { artifact ->
                     val buildDependencies = artifact.buildDependencies
                     when(buildDependencies) {
@@ -171,6 +158,15 @@ class SpringBintrayPlugin: Plugin<Project> {
     private fun AbstractBintrayTask.configureBintrayAuth() {
         bintrayUser = ext.bintrayUser ?: project.property("bintrayUser") as String?
         bintrayKey = ext.bintrayKey ?: project.property("bintrayKey") as String?
+    }
+
+    private fun version(project: Project): String {
+        val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+        if(publication is MavenPublication) {
+            if(publication.version is String)
+                return publication.version
+        }
+        return project.version.toString()
     }
 
     private fun findGithubRemote(project: Project): String? {

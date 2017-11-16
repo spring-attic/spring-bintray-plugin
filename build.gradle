@@ -12,7 +12,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '0.9.7'
     id 'nebula.plugin-plugin' version '5.17.1'
-    id 'nebula.kotlin' version '1.1.51'
+    id 'nebula.kotlin' version '1.1.60'
     id 'nebula.integtest' version '3.4.0'
 }
 
