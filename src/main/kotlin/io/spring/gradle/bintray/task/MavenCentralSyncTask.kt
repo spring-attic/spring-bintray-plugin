@@ -40,7 +40,7 @@ open class MavenCentralSyncTask : AbstractBintrayTask() {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),
                 mapper.writeValueAsString(MavenCentralSync(ossrhUser, ossrhPassword)))
 
-        val packageVersionPath = "$org/$repo/$packageName/$version"
+        val packageVersionPath = "$org/$repo/$packageName/versions/$version"
         val request = Request.Builder()
                 .url("$BINTRAY_API_URL/maven_central_sync/$packageVersionPath")
                 .post(body)
