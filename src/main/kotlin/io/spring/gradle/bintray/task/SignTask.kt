@@ -22,7 +22,7 @@ open class SignTask : AbstractBintrayTask() {
             bintrayClient.http()
                     .newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
                     .execute()
-                    .isSuccessful
+                    .use { response -> response.isSuccessful }
         }
 
         super.postConfigure()
@@ -42,9 +42,10 @@ open class SignTask : AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = bintrayClient.http().newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw GradleException("failed to sign $path: HTTP ${response.code()} / ${response.body()?.string()}")
+        bintrayClient.http().newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw GradleException("failed to sign $path: HTTP ${response.code()} / ${response.body()?.string()}")
+            }
         }
     }
 }

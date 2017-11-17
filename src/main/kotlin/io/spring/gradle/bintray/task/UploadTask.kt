@@ -109,14 +109,15 @@ private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
                     .build()
 
             try {
-                val response = bintrayClient.http().newCall(request).execute()
-                if (!response.isSuccessful) {
-                    throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
-                }
+                bintrayClient.http().newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
+                    }
 
-                response.body()?.let { body ->
-                    mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
-                        logger.warn("Upload response for $path contained warning message: '{}'", warning)
+                    response.body()?.let { body ->
+                        mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
+                            logger.warn("Upload response for $path contained warning message: '{}'", warning)
+                        }
                     }
                 }
             } catch(e: ConnectException) {

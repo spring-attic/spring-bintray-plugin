@@ -33,13 +33,14 @@ open class PublishTask : AbstractBintrayTask() {
     override fun postConfigure() {
         onlyIf {
             // version must exist in Bintray prior to publishing
-            val response = bintrayClient.http()
+            bintrayClient.http()
                     .newCall(Request.Builder().get().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
                     .execute()
-
-            // if the version is already published, do nothing
-            val body = response.body()?.string()
-            response.isSuccessful && (mapper.readValue(body, GetVersion::class.java)?.published?.let { !it } ?: false)
+                    .use { response ->
+                        // if the version is already published, do nothing
+                        val body = response.body()?.string()
+                        response.isSuccessful && (mapper.readValue(body, GetVersion::class.java)?.published?.let { !it } ?: false)
+                    }
         }
         super.postConfigure()
     }
@@ -57,11 +58,12 @@ open class PublishTask : AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = bintrayClient.http().newCall(request).execute()
-        if (response.isSuccessful) {
-            logger.info("Created Bintray package version /$packageVersionPath")
-        } else {
-            throw GradleException("Could not publish package version /$packageVersionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+        bintrayClient.http().newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                logger.info("Created Bintray package version /$packageVersionPath")
+            } else {
+                throw GradleException("Could not publish package version /$packageVersionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+            }
         }
     }
 

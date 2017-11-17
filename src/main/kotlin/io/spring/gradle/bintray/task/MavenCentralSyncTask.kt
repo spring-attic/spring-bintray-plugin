@@ -28,7 +28,7 @@ open class MavenCentralSyncTask : AbstractBintrayTask() {
             bintrayClient.http()
                     .newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
                     .execute()
-                    .isSuccessful
+                    .use { response -> response.isSuccessful }
         }
         super.postConfigure()
     }
@@ -46,11 +46,12 @@ open class MavenCentralSyncTask : AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = bintrayClient.http().newCall(request).execute()
-        if (response.isSuccessful) {
-            logger.info("Synced /$packageVersionPath to Maven Central")
-        } else {
-            throw GradleException("Could not sync /$packageVersionPath to Maven Central: HTTP ${response.code()} / ${response.body()?.string()}")
+        bintrayClient.http().newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                logger.info("Synced /$packageVersionPath to Maven Central")
+            } else {
+                throw GradleException("Could not sync /$packageVersionPath to Maven Central: HTTP ${response.code()} / ${response.body()?.string()}")
+            }
         }
     }
 

@@ -35,8 +35,12 @@ open class CreatePackageTask : AbstractBintrayTask() {
 
     override fun postConfigure() {
         onlyIf {
-            val response = bintrayClient.http().newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/$packagePath" }).build()).execute()
-            !response.isSuccessful // if successful, this package already exists
+            bintrayClient.http().newCall(Request.Builder().head().url(pkg.run { "$BINTRAY_API_URL/$packagePath" }).build())
+                    .execute()
+                    .use { response ->
+                        !response.isSuccessful // if successful, this package already exists
+                    }
+
         }
         super.postConfigure()
     }
@@ -54,13 +58,14 @@ open class CreatePackageTask : AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = bintrayClient.http().newCall(request).execute()
-        if(response.isSuccessful) {
-            logger.info("Created Bintray package /$packagePath")
-        } else if(response.code() == 409) {
-            logger.info("Bintray package already exists /$packagePath")
-        } else {
-            throw GradleException("Could not create package /$packagePath: HTTP ${response.code()} / ${response.body()?.string()}")
+        bintrayClient.http().newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                logger.info("Created Bintray package /$packagePath")
+            } else if (response.code() == 409) {
+                logger.info("Bintray package already exists /$packagePath")
+            } else {
+                throw GradleException("Could not create package /$packagePath: HTTP ${response.code()} / ${response.body()?.string()}")
+            }
         }
     }
 

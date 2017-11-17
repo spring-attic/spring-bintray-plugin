@@ -24,8 +24,9 @@ open class CreateVersionTask: AbstractBintrayTask() {
 
     override fun postConfigure() {
         onlyIf {
-            val response = bintrayClient.http().newCall(Request.Builder().head().url(versionPath).build()).execute()
-            !response.isSuccessful // if successful, this version already exists
+            bintrayClient.http().newCall(Request.Builder().head().url(versionPath).build())
+                    .execute()
+                    .use { response -> !response.isSuccessful } // if successful, this version already exists
         }
         super.postConfigure()
     }
@@ -43,13 +44,14 @@ open class CreateVersionTask: AbstractBintrayTask() {
                 .post(body)
                 .build()
 
-        val response = bintrayClient.http().newCall(request).execute()
-        if(response.isSuccessful) {
-            logger.info("Created Bintray version $versionPath")
-        } else if(response.code() == 409) {
-            logger.info("Bintray version already exists $versionPath")
-        } else {
-            throw GradleException("Could not create version $versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+        bintrayClient.http().newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                logger.info("Created Bintray version $versionPath")
+            } else if (response.code() == 409) {
+                logger.info("Bintray version already exists $versionPath")
+            } else {
+                throw GradleException("Could not create version $versionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+            }
         }
     }
 
