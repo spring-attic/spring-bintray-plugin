@@ -41,10 +41,10 @@ class SpringBintrayPlugin: Plugin<Project> {
         mavenCentralSyncTask.dependsOn(publishTask)
 
         project.afterEvaluate {
-            if (ext.org == null || ext.repo == null || ext.publication == null || ext.licenses == null) {
+            if (ext.bintrayUser == null || ext.bintrayKey == null || ext.repo == null || ext.publication == null || ext.licenses == null) {
                 listOf(createPackageTask, createVersionTask, uploadTask, signTask, publishTask, mavenCentralSyncTask).forEach {
                     it.onlyIf {
-                        project.logger.info("bintray.[org, repo, packageName, licenses] are all required")
+                        project.logger.info("bintray.[bintrayUser, bintrayKey, repo, packageName, licenses] are all required")
                         false
                     }
                 }
@@ -162,8 +162,8 @@ class SpringBintrayPlugin: Plugin<Project> {
     }
 
     private fun AbstractBintrayTask.configureBintrayAuth() {
-        bintrayUser = ext.bintrayUser ?: project.property("bintrayUser") as String?
-        bintrayKey = ext.bintrayKey ?: project.property("bintrayKey") as String?
+        bintrayUser = ext.bintrayUser ?: project.findProperty("bintrayUser") as String?
+        bintrayKey = ext.bintrayKey ?: project.findProperty("bintrayKey") as String?
     }
 
     private fun version(project: Project): String {
