@@ -93,6 +93,6 @@ class PublishTaskIntegSpec extends IntegrationTestKitSpec {
 
     def uploadFiles() {
         expect:
-        runTasks('bintrayPublish', "-s")
+        runTasks('bintrayPublish', '-s')
     }
 }

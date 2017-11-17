@@ -4,6 +4,7 @@ import io.spring.gradle.bintray.task.*
 import org.ajoberstar.grgit.Remote
 import org.ajoberstar.grgit.operation.OpenOp
 import org.ajoberstar.grgit.operation.RemoteListOp
+import org.codehaus.groovy.runtime.DefaultGroovyMethods.capitalize
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -110,6 +111,11 @@ class SpringBintrayPlugin: Plugin<Project> {
             t.overrideOnUpload = ext.overrideOnUpload
             t.gpgPassphrase = ext.gpgPassphrase
             t.configureBintrayAuth()
+
+            val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+            if(publication is MavenPublication) {
+                t.dependsOn("generatePomFileFor${publication.name.capitalize()}Publication")
+            }
 
             t.postConfigure()
         }

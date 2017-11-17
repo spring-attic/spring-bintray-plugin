@@ -11,6 +11,8 @@ import okhttp3.RequestBody
 import org.gradle.api.GradleException
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.internal.artifact.DefaultMavenArtifact
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -19,6 +21,7 @@ import org.gradle.workers.WorkerConfiguration
 import org.gradle.workers.WorkerExecutor
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.net.ConnectException
 import javax.inject.Inject
 
 /**
@@ -49,7 +52,16 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
 
     @TaskAction
     fun upload() {
-        publication.artifacts.forEach { artifact ->
+        val mavenPublication = publication as DefaultMavenPublication
+        val pomFile = mavenPublication.asNormalisedPublication().pomFile
+        if(!pomFile.exists()) {
+            throw GradleException("POM file does not exist: ${pomFile.absolutePath}")
+        }
+
+        val artifacts = setOf(DefaultMavenArtifact(pomFile, "pom", null)) +
+                publication.artifacts
+
+        artifacts.forEach { artifact ->
             workerExecutor.submit(UploadWorker::class.java) { config: WorkerConfiguration ->
                 val path =
                         (publication.groupId?.replace('.', '/') ?: "") +
@@ -96,15 +108,19 @@ private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
                     .url("${AbstractBintrayTask.BINTRAY_API_URL}/content/$org/$repo/$packageName/$version/$path")
                     .build()
 
-            val response = bintrayClient.http().newCall(request).execute()
-            if (!response.isSuccessful) {
-                throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
-            }
-
-            response.body()?.let { body ->
-                mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
-                    logger.warn("Upload response for $path contained warning message: '{}'", warning)
+            try {
+                val response = bintrayClient.http().newCall(request).execute()
+                if (!response.isSuccessful) {
+                    throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
                 }
+
+                response.body()?.let { body ->
+                    mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
+                        logger.warn("Upload response for $path contained warning message: '{}'", warning)
+                    }
+                }
+            } catch(e: ConnectException) {
+                throw GradleException("failed to upload $path", e)
             }
         }
     }
