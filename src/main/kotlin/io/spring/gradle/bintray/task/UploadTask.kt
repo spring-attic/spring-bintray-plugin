@@ -65,7 +65,7 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
             workerExecutor.submit(UploadWorker::class.java) { config: WorkerConfiguration ->
                 val path =
                         (publication.groupId?.replace('.', '/') ?: "") +
-                                "/${publication.artifactId}/${publication.artifactId}-${publication.version}" +
+                                "/${publication.artifactId}/${publication.version}/${publication.artifactId}-${publication.version}" +
                                 (artifact.classifier?.let { "-$it" } ?: "") +
                                 ".${artifact.extension}"
 
