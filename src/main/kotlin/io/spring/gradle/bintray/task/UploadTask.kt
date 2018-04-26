@@ -5,23 +5,19 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.spring.gradle.bintray.BintrayClient
 import io.spring.gradle.bintray.BintrayPackage
-import okhttp3.MediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import org.gradle.api.GradleException
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.internal.artifact.DefaultMavenArtifact
 import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.workers.IsolationMode
 import org.gradle.workers.WorkerConfiguration
 import org.gradle.workers.WorkerExecutor
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.net.ConnectException
 import javax.inject.Inject
 
 /**
@@ -30,117 +26,104 @@ import javax.inject.Inject
  * @author Jon Schneider
  */
 open class UploadTask @Inject constructor(private val workerExecutor: WorkerExecutor) : AbstractBintrayTask() {
-    @Input lateinit var pkg: BintrayPackage
-    @Input lateinit var publicationName: String
-    @Input var overrideOnUpload: Boolean = false
-    @Input @Optional var gpgPassphrase: String? = null
+	init {
+		onlyIf {
+			if (publication == null) {
+				logger.info("'${ext.publication}' does not refer to a maven publication, skipping")
+				false
+			} else true
+		}
+	}
 
-    private lateinit var publication: MavenPublication
+	@TaskAction
+	fun upload() {
+		if (publication is DefaultMavenPublication) {
+			val mavenPub = publication as DefaultMavenPublication
 
-    override fun postConfigure() {
-        val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(publicationName)
-        if (publication is MavenPublication) {
-            this.publication = publication
-        } else {
-            onlyIf {
-                logger.info("'$publicationName' does not refer to a maven publication, skipping")
-                false
-            }
-        }
-        super.postConfigure()
-    }
+			val pomFile = mavenPub.asNormalisedPublication().pomFile
+			if (!pomFile.exists()) {
+				throw GradleException("POM file does not exist: ${pomFile.absolutePath}")
+			}
 
-    @TaskAction
-    fun upload() {
-        val mavenPublication = publication as DefaultMavenPublication
-        val pomFile = mavenPublication.asNormalisedPublication().pomFile
-        if(!pomFile.exists()) {
-            throw GradleException("POM file does not exist: ${pomFile.absolutePath}")
-        }
+			val artifacts = setOf(DefaultMavenArtifact(pomFile, "pom", null)) +
+					mavenPub.artifacts
 
-        val artifacts = setOf(DefaultMavenArtifact(pomFile, "pom", null)) +
-                publication.artifacts
+			artifacts.forEach { artifact ->
+				workerExecutor.submit(UploadWorker::class.java) { config: WorkerConfiguration ->
+					val path =
+							(mavenPub.groupId?.replace('.', '/') ?: "") +
+									"/${mavenPub.artifactId}/${mavenPub.version}/${mavenPub.artifactId}-${mavenPub.version}" +
+									(artifact.classifier?.let { "-$it" } ?: "") +
+									".${artifact.extension}"
 
-        artifacts.forEach { artifact ->
-            workerExecutor.submit(UploadWorker::class.java) { config: WorkerConfiguration ->
-                val path =
-                        (publication.groupId?.replace('.', '/') ?: "") +
-                                "/${publication.artifactId}/${publication.version}/${publication.artifactId}-${publication.version}" +
-                                (artifact.classifier?.let { "-$it" } ?: "") +
-                                ".${artifact.extension}"
-
-                config.isolationMode = IsolationMode.NONE
-                config.params(bintrayClient, pkg, publication.version, path, artifact.file, overrideOnUpload, gpgPassphrase ?: "")
-            }
-        }
-    }
+					config.isolationMode = IsolationMode.NONE
+					config.params(bintrayUser(), bintrayKey(), pkg, mavenPub.version, path, artifact.file, ext.overrideOnUpload,
+							ext.gpgPassphrase ?: "")
+				}
+			}
+		} else {
+			logger.info("'${ext.publication}' does not refer to a maven publication, skipping")
+		}
+	}
 }
 
 /**
  * Allows artifacts to be uploaded in parallel, speeding the completion of this task
  */
-private class UploadWorker @Inject constructor(val bintrayClient: BintrayClient,
-                                               val pkg: BintrayPackage,
-                                               val version: String,
-                                               val path: String,
-                                               val artifact: File,
-                                               val overrideOnUpload: Boolean,
-                                               val gpgPassphrase: String?) : Runnable {
+private class UploadWorker @Inject constructor(val bintrayUser: String,
+											   val bintrayKey: String,
+											   val pkg: BintrayPackage,
+											   val version: String,
+											   val path: String,
+											   val artifact: File,
+											   val overrideOnUpload: Boolean,
+											   val gpgPassphrase: String?) : Runnable {
 
-    @Transient private val mapper = ObjectMapper().registerModule(KotlinModule())
-    @Transient private val logger = LoggerFactory.getLogger(UploadWorker::class.java)
+	@Transient
+	private val mapper = ObjectMapper().registerModule(KotlinModule())
 
-    override fun run() {
-        val (org, repo, packageName) = pkg
+	@Transient
+	private val logger = LoggerFactory.getLogger(UploadWorker::class.java)
 
-        if(overrideOnUpload || !artifactExists()) {
-            logger.info("Uploading $path")
+	override fun run() {
+		val bintrayClient = BintrayClient(bintrayUser, bintrayKey)
 
-            var requestBuilder = Request.Builder()
-                    .header("Content-Type", "*/*")
+		if (overrideOnUpload || !artifactExists()) {
+			logger.info("Uploading $path")
 
-            if(!gpgPassphrase.isNullOrBlank()) {
-                requestBuilder = requestBuilder.header("X-GPG-PASSPHRASE", gpgPassphrase)
-            }
+			try {
+				bintrayClient.upload("content/${pkg.subject}/${pkg.repo}/${pkg.name}/$version/$path", artifact, gpgPassphrase).use { response ->
+					if (!response.isSuccessful) {
+						throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
+					}
 
-            val request = requestBuilder
-                    .put(RequestBody.create(MediaType.parse("application/octet-stream"), artifact))
-                    .url("${AbstractBintrayTask.BINTRAY_API_URL}/content/$org/$repo/$packageName/$version/$path")
-                    .build()
+					response.body()?.let { body ->
+						mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
+							logger.warn("Upload response for $path contained warning message: '{}'", warning)
+						}
+					}
+				}
+			} catch (t: Throwable) {
+				throw GradleException("failed to upload $path", t)
+			}
+		}
+	}
 
-            try {
-                bintrayClient.http().newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw GradleException("failed to upload $path: HTTP ${response.code()} / ${response.body()?.string()}")
-                    }
+	private fun artifactExists(): Boolean {
+		val (subject, repo) = pkg
 
-                    response.body()?.let { body ->
-                        mapper.readValue(body.string(), UploadResponse::class.java).warn?.let { warning ->
-                            logger.warn("Upload response for $path contained warning message: '{}'", warning)
-                        }
-                    }
-                }
-            } catch(e: ConnectException) {
-                throw GradleException("failed to upload $path", e)
-            }
-        }
-    }
+		val request = Request.Builder()
+				.head()
+				.url("https://dl.bintray.com/$subject/$repo/$path")
+				.build()
 
-    private fun artifactExists(): Boolean {
-        val (subject, repo) = pkg
+		val response = OkHttpClient.Builder().build().newCall(request).execute()
 
-        val request = Request.Builder()
-                .head()
-                .url("https://dl.bintray.com/$subject/$repo/$path")
-                .build()
-
-        val response = bintrayClient.http().newCall(request).execute()
-
-        return if(response.isSuccessful) {
-            logger.info("/$subject/$repo/$path already exists, skipping upload")
-            true
-        } else false
-    }
+		return if (response.isSuccessful) {
+			logger.info("/$subject/$repo/$path already exists, skipping upload")
+			true
+		} else false
+	}
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)

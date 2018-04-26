@@ -5,6 +5,7 @@ buildscript {
 
     dependencies {
         classpath 'gradle.plugin.nl.javadude.gradle.plugins:license-gradle-plugin:0.13.1'
+		classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
     }
 }
 
@@ -12,11 +13,12 @@ plugins {
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '0.9.7'
     id 'nebula.plugin-plugin' version '5.17.1'
-    id 'nebula.kotlin' version '1.1.60'
+    id 'nebula.kotlin' version '1.2.21'
     id 'nebula.integtest' version '3.4.0'
 }
 
 apply plugin: 'com.github.hierynomus.license'
+apply plugin: 'org.junit.platform.gradle.plugin'
 
 repositories {
     jcenter()
@@ -34,13 +36,21 @@ contacts {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect"
-    compile 'org.ajoberstar:grgit:1.9.3'
+	compile 'org.eclipse.jgit:org.eclipse.jgit:latest.release'
 
-    // shade these
-    compile 'com.squareup.okhttp3:okhttp:3.8.1'
-    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.+'
+	// shade these
+	compile 'com.squareup.okhttp3:okhttp:3.8.1'
+	compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.+'
 
-    testCompile 'com.netflix.nebula:nebula-test:latest.release'
+	testCompile 'com.netflix.nebula:nebula-test:latest.release'
+
+	// JUnit 5
+	testCompile 'org.junit.jupiter:junit-jupiter-api:5.0.0'
+	testCompile 'org.junit.jupiter:junit-jupiter-params:5.0.0'
+	testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.0.0'
+
+	testCompile 'org.assertj:assertj-core:3.+'
+	testCompile 'com.nhaarman:mockito-kotlin:latest.release'
 }
 
 license {

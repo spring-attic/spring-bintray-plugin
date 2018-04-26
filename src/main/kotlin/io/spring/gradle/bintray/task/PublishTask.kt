@@ -2,14 +2,11 @@ package io.spring.gradle.bintray.task
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
-import io.spring.gradle.bintray.BintrayPackage
-import okhttp3.MediaType
-import okhttp3.Request
-import okhttp3.RequestBody
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.gradle.api.GradleException
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -27,52 +24,40 @@ import org.gradle.api.tasks.TaskAction
  * @author Jon Schneider
  */
 open class PublishTask : AbstractBintrayTask() {
-    @Input lateinit var pkg: BintrayPackage
-    @Input lateinit var version: String
+	companion object {
+		val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
+	}
 
-    override fun postConfigure() {
-        onlyIf {
-            // version must exist in Bintray prior to publishing
-            bintrayClient.http()
-                    .newCall(Request.Builder().get().url(pkg.run { "$BINTRAY_API_URL/packages/$subject/$repo/$name/versions/$version" }).build())
-                    .execute()
-                    .use { response ->
-                        // if the version is already published, do nothing
-                        val body = response.body()?.string()
-                        response.isSuccessful && (mapper.readValue(body, GetVersion::class.java)?.published?.let { !it } ?: false)
-                    }
-        }
-        super.postConfigure()
-    }
+	init {
+		onlyIf {
+			// version must exist in Bintray prior to publishing
+			bintrayClient.get(versionPath).use { response ->
+				// if the version is already published, do nothing
+				val body = response.body()?.string()
+				response.isSuccessful && (mapper.readValue(body, GetVersion::class.java)?.published?.let { !it }
+						?: false)
+			}
+		}
+	}
 
-    @TaskAction
-    fun publish() {
-        val (org, repo, packageName) = pkg
+	@TaskAction
+	fun publish() {
+		val packageVersionPath = "${pkg.subject}/${pkg.repo}/${pkg.name}/$version"
+		bintrayClient.post("content/$packageVersionPath/publish", Publish()).use { response ->
+			if (response.isSuccessful) {
+				logger.info("Created Bintray package version /$packageVersionPath")
+			} else {
+				throw GradleException("Could not publish package version /$packageVersionPath: HTTP ${response.code()} / ${response.body()?.string()}")
+			}
+		}
+	}
 
-        val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),
-                mapper.writeValueAsString(Publish()))
+	@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	private data class Publish(
+			// causes this request to block waiting for publishing to complete, blocking for the maximum timeout allowed by Bintray
+			val publishWaitForSecs: Int = -1)
 
-        val packageVersionPath = "$org/$repo/$packageName/$version"
-        val request = Request.Builder()
-                .url("$BINTRAY_API_URL/content/$packageVersionPath/publish")
-                .post(body)
-                .build()
-
-        bintrayClient.http().newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                logger.info("Created Bintray package version /$packageVersionPath")
-            } else {
-                throw GradleException("Could not publish package version /$packageVersionPath: HTTP ${response.code()} / ${response.body()?.string()}")
-            }
-        }
-    }
-
-    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private data class Publish(
-            // causes this request to block waiting for publishing to complete, blocking for the maximum timeout allowed by Bintray
-            val publishWaitForSecs: Int = -1)
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private data class GetVersion(val published: Boolean)
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	private data class GetVersion(val published: Boolean)
 }
