@@ -89,4 +89,5 @@ bintray.pkg {
     vcsUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin.git'
     issueTrackerUrl = 'https://github.com/spring-gradle-plugins/spring-bintray-plugin/issues'
     labels = ['gradle', 'spring', 'bintray']
+    gpgPassphrase = project.findProperty('gpgPassphrase')
 }
