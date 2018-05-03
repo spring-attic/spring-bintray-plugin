@@ -25,12 +25,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.slf4j.LoggerFactory
 
 /**
  * @author Jon Schneider
  */
 class SpringBintrayPlugin : Plugin<Project> {
 	lateinit var ext: SpringBintrayExtension
+	private val logger = LoggerFactory.getLogger(SpringBintrayPlugin::class.java)
 
 	override fun apply(project: Project) {
 		ext = project.extensions.create("bintray", SpringBintrayExtension::class.java)
@@ -40,24 +42,8 @@ class SpringBintrayPlugin : Plugin<Project> {
 		val createVersionTask = project.tasks.create("bintrayCreateVersion", CreateVersionTask::class.java)
 		createVersionTask.dependsOn(createPackageTask)
 
-		project.tasks.withType(CreateVersionTask::class.java) { t ->
-			val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
-			if (publication is MavenPublication) {
-				publication.artifacts.forEach { artifact ->
-					t.dependsOn(artifact.buildDependencies)
-				}
-			}
-		}
-
 		val uploadTask = project.tasks.create("bintrayUpload", UploadTask::class.java)
 		uploadTask.dependsOn(createVersionTask)
-
-		project.tasks.withType(UploadTask::class.java) { t ->
-			val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
-			if (publication is MavenPublication) {
-				t.dependsOn("generatePomFileFor${publication.name.capitalize()}Publication")
-			}
-		}
 
 		// We try to sign on upload, so this task won't be part of the default chain of events.
 		// It's here in case you need to sign manually after uploading for whatever reason.
@@ -71,10 +57,31 @@ class SpringBintrayPlugin : Plugin<Project> {
 		mavenCentralSyncTask.dependsOn(publishTask)
 
 		project.afterEvaluate {
+			project.tasks.withType(CreateVersionTask::class.java) { t ->
+				println()
+				if(ext.publication != null) {
+					val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+					if (publication is MavenPublication) {
+						publication.artifacts.forEach { artifact ->
+							t.dependsOn(artifact.buildDependencies)
+						}
+					}
+				}
+			}
+
+			project.tasks.withType(UploadTask::class.java) { t ->
+				if(ext.publication != null) {
+					val publication = project.extensions.getByType(PublishingExtension::class.java).publications.findByName(ext.publication)
+					if (publication is MavenPublication) {
+						t.dependsOn("generatePomFileFor${publication.name.capitalize()}Publication")
+					}
+				}
+			}
+
 			if (ext.bintrayUser == null || ext.bintrayKey == null || ext.repo == null || ext.publication == null || ext.licenses == null) {
 				listOf(createPackageTask, createVersionTask, uploadTask, signTask, publishTask, mavenCentralSyncTask).forEach {
 					it.onlyIf {
-						project.logger.info("bintray.[bintrayUser, bintrayKey, repo, packageName, licenses] are all required")
+						project.logger.info("bintray.[bintrayUser, bintrayKey, repo, publication, licenses] are all required")
 						false
 					}
 				}

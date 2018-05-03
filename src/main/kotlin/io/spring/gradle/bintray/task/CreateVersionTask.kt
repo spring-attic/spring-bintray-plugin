@@ -28,7 +28,7 @@ import org.gradle.api.tasks.TaskAction
  */
 open class CreateVersionTask : AbstractBintrayTask() {
 	init {
-		onlyIf { !bintrayClient.isSuccessful(versionPath) }
+		onlyIf { !bintrayClient.headIsSuccessful(versionPath) }
 	}
 
 	@TaskAction

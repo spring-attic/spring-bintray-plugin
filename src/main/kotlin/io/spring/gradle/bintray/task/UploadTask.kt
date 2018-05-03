@@ -44,7 +44,7 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
 	init {
 		onlyIf {
 			if (publication == null) {
-				logger.info("'${ext.publication}' does not refer to a maven publication, skipping")
+				logger.warn("'${ext.publication}' does not refer to a maven publication, skipping")
 				false
 			} else true
 		}

@@ -59,11 +59,15 @@ class BintrayClient(val bintrayUser: String?, val bintrayKey: String?) {
 				.build()
 	}
 
-	fun get(path: String): Response = httpClient()
+	fun head(path: String): Response = httpClient()
 			.newCall(Request.Builder().head().url("$BINTRAY_API_URL/$path").build())
 			.execute()
 
-	fun isSuccessful(path: String): Boolean = get(path).use { response -> response.isSuccessful }
+	fun get(path: String): Response = httpClient()
+			.newCall(Request.Builder().get().url("$BINTRAY_API_URL/$path").build())
+			.execute()
+
+	fun headIsSuccessful(path: String): Boolean = head(path).use { response -> response.isSuccessful }
 
 	fun post(path: String, body: Any): Response {
 		val bodyStr = RequestBody.create(MediaType.parse("application/json; charset=utf-8"),

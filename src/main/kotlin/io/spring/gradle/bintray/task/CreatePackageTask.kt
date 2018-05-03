@@ -31,7 +31,7 @@ import java.io.IOException
 open class CreatePackageTask : AbstractBintrayTask() {
 
 	init {
-		onlyIf { !bintrayClient.isSuccessful(packagePath) }
+		onlyIf { !bintrayClient.headIsSuccessful(packagePath) }
 	}
 
 	@TaskAction

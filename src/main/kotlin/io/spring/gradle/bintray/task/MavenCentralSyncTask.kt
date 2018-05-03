@@ -33,7 +33,7 @@ open class MavenCentralSyncTask : AbstractBintrayTask() {
 	init {
 		onlyIf {
 			// version must exist in Bintray prior to syncing
-			bintrayClient.isSuccessful(versionPath)
+			bintrayClient.headIsSuccessful(versionPath)
 		}
 
 		onlyIf {

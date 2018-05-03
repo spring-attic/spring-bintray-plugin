@@ -47,4 +47,8 @@ open class SpringBintrayExtension {
 
 	fun bintrayPackage(p: Project): BintrayPackage =
 			BintrayPackage(org!!, repo!!, packageName ?: p.name)
+
+	override fun toString(): String {
+		return "bintray(org=$org, repo=$repo, packageName=$packageName, packageDescription=$packageDescription, labels=$labels, licenses=$licenses, websiteUrl=$websiteUrl, issueTrackerUrl=$issueTrackerUrl, vcsUrl=$vcsUrl, bintrayUser=$bintrayUser, bintrayKey=$bintrayKey, ossrhUser=$ossrhUser, ossrhPassword=$ossrhPassword, publication=$publication, gpgPassphrase=$gpgPassphrase, overrideOnUpload=$overrideOnUpload)"
+	}
 }

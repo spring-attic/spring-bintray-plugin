@@ -21,7 +21,7 @@ import org.gradle.api.tasks.TaskAction
 
 open class SignTask : AbstractBintrayTask() {
 	init {
-		onlyIf { bintrayClient.isSuccessful(versionPath) }
+		onlyIf { bintrayClient.headIsSuccessful(versionPath) }
 	}
 
 	@TaskAction

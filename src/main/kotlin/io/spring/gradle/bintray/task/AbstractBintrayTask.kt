@@ -26,6 +26,10 @@ import org.gradle.api.publish.maven.MavenPublication
 abstract class AbstractBintrayTask : DefaultTask() {
 	init {
 		onlyIf {
+			if(bintrayUser() == null)
+				logger.warn("No bintray.bintrayUser defined. Skipping.")
+			if(bintrayKey() == null)
+				logger.warn("No bintray.bintrayKey defined. Skipping.")
 			bintrayUser() != null && bintrayKey() != null
 		}
 	}
