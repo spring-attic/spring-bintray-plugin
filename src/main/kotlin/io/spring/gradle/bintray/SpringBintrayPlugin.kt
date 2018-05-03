@@ -81,7 +81,7 @@ class SpringBintrayPlugin : Plugin<Project> {
 			if (ext.bintrayUser == null || ext.bintrayKey == null || ext.repo == null || ext.publication == null || ext.licenses == null) {
 				listOf(createPackageTask, createVersionTask, uploadTask, signTask, publishTask, mavenCentralSyncTask).forEach {
 					it.onlyIf {
-						project.logger.info("bintray.[bintrayUser, bintrayKey, repo, publication, licenses] are all required")
+						project.logger.warn("bintray.[bintrayUser, bintrayKey, repo, publication, licenses] are all required for Bintray publishing")
 						false
 					}
 				}

@@ -49,7 +49,7 @@ open class MavenCentralSyncTask : AbstractBintrayTask() {
 
 		onlyIf {
 			if (ext.ossrhUser == null || ext.ossrhPassword == null) {
-				project.logger.info("bintray.[ossrhUser, ossrhPassword] are required to sync to Maven Central")
+				project.logger.warn("bintray.[ossrhUser, ossrhPassword] are required to sync to Maven Central")
 				false
 			} else true
 		}
