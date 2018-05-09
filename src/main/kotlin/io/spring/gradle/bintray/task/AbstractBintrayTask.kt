@@ -59,8 +59,8 @@ abstract class AbstractBintrayTask : DefaultTask() {
 	val packagePath: String by lazy { pkg.run { "packages/$subject/$repo/$name" } }
 	val versionPath: String by lazy { pkg.run { "packages/$subject/$repo/$name/versions/$version" } }
 
-	fun bintrayUser() = ext.bintrayUser ?: project.findProperty("bintrayUser") as String?
-	fun bintrayKey() = ext.bintrayKey ?: project.findProperty("bintrayKey") as String?
+	fun bintrayUser() = ext.bintrayUser(project)
+	fun bintrayKey() = ext.bintrayKey(project)
 
 	override fun getGroup(): String {
 		return "bintray"
