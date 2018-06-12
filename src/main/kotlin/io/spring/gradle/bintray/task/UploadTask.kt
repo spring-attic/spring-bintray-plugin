@@ -23,9 +23,6 @@ import io.spring.gradle.bintray.BintrayPackage
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.gradle.api.GradleException
-import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.publish.maven.internal.artifact.DefaultMavenArtifact
 import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 import org.gradle.api.tasks.TaskAction
 import org.gradle.workers.IsolationMode
@@ -55,13 +52,11 @@ open class UploadTask @Inject constructor(private val workerExecutor: WorkerExec
 		if (publication is DefaultMavenPublication) {
 			val mavenPub = publication as DefaultMavenPublication
 
-			val pomFile = mavenPub.asNormalisedPublication().pomFile
-			if (!pomFile.exists()) {
-				throw GradleException("POM file does not exist: ${pomFile.absolutePath}")
-			}
+			// it's not clear from the Gradle implementation if it's possible for pomArtifact to be null, so we're defensive
+			val pomArtifact = mavenPub.asNormalisedPublication().pomArtifact ?:
+				throw GradleException("POM file does not exist for publication '${mavenPub.name}'")
 
-			val artifacts = setOf(DefaultMavenArtifact(pomFile, "pom", null)) +
-					mavenPub.artifacts
+			val artifacts = setOf(pomArtifact) + mavenPub.artifacts
 
 			artifacts.forEach { artifact ->
 				workerExecutor.submit(UploadWorker::class.java) { config: WorkerConfiguration ->
