@@ -1,3 +1,5 @@
+# spring-bintray-plugin is no longer actively maintained by VMware, Inc.
+
 # Spring Bintray Plugin
 
 ## Installing
